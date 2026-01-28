@@ -1,215 +1,170 @@
 let video;
-let poseNet;
-let poses = [];
-let hearts = [];
+let canvas;
+let ctx;
+let objectDetector;
+let detections = [];
 let modelLoaded = false;
-let cameraReady = false;
-let music;
 
-function setup() {
-    let canvas = createCanvas(windowWidth, windowHeight);
-    canvas.parent('canvas-container');
-    
-    // Iniciar captura de video
-    video = createCapture(VIDEO, videoReady);
-    video.size(width, height);
-    video.hide();
-    
-    // Cargar música romántica
-    music = createAudio('https://www.bensound.com/bensound-music/bensound-romantic.mp3');
-    music.loop();
-    
-    document.getElementById('status').textContent = 'Iniciando cámara...';
+async function setup() {
+    try {
+        video = document.getElementById('video');
+        canvas = document.getElementById('canvas');
+        ctx = canvas.getContext('2d');
+
+        // Actualizar texto de carga
+        document.querySelector('.loading-text').textContent = 'Solicitando acceso a la cámara...';
+
+        // Solicitar acceso a la cámara
+        const stream = await navigator.mediaDevices.getUserMedia({
+            video: { 
+                width: { ideal: 640 },
+                height: { ideal: 480 },
+                facingMode: 'user'
+            },
+            audio: false
+        });
+        
+        video.srcObject = stream;
+        
+        // Esperar a que el video esté listo
+        video.addEventListener('loadeddata', () => {
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            
+            document.querySelector('.loading-text').textContent = 'Cargando modelo de detección...';
+            
+            // Inicializar el modelo de detección de objetos
+            initializeModel();
+        });
+
+        // Manejar errores de video
+        video.addEventListener('error', (e) => {
+            console.error('Error en video:', e);
+            showError('Error al cargar el video de la cámara');
+        });
+
+    } catch (error) {
+        console.error('Error al acceder a la cámara:', error);
+        if (error.name === 'NotAllowedError') {
+            showError('Permiso de cámara denegado. Por favor, permite el acceso a la cámara en la configuración de tu navegador.');
+        } else if (error.name === 'NotFoundError') {
+            showError('No se encontró ninguna cámara. Asegúrate de tener una cámara conectada.');
+        } else {
+            showError('Error al acceder a la cámara: ' + error.message);
+        }
+    }
 }
 
-function videoReady() {
-    console.log('Video listo');
-    cameraReady = true;
-    document.getElementById('status').textContent = 'Cargando modelo de detección...';
-    
-    // Cargar modelo PoseNet después de que el video esté listo
-    poseNet = ml5.poseNet(video, {
-        architecture: 'MobileNetV1',
-        imageScaleFactor: 0.3,
-        outputStride: 16,
-        flipHorizontal: true,
-        minConfidence: 0.5,
-        maxPoseDetections: 1,
-        scoreThreshold: 0.5,
-        nmsRadius: 20,
-        detectionType: 'single',
-        inputResolution: 513,
-        multiplier: 0.75,
-        quantBytes: 2
-    }, modelReady);
-    
-    poseNet.on('pose', function(results) {
-        poses = results;
-    });
+function initializeModel() {
+    try {
+        // Usar la sintaxis correcta para ML5.js como en p5.js
+        objectDetector = ml5.objectDetector('cocossd', modelReady);
+        
+        function modelReady() {
+            console.log('Modelo COCO-SSD cargado');
+            modelLoaded = true;
+            
+            // Ocultar pantalla de carga y mostrar video
+            document.getElementById('loading').classList.add('hidden');
+            document.getElementById('video-container').classList.remove('hidden');
+            // No mostrar el panel de detecciones
+            // document.getElementById('detection-info').classList.remove('hidden');
+            
+            // Comenzar la detección
+            detect();
+        }
+    } catch (error) {
+        console.error('Error al cargar el modelo:', error);
+        showError('Error al cargar el modelo de detección: ' + error.message);
+    }
 }
 
-function modelReady() {
-    console.log('Modelo listo');
-    modelLoaded = true;
-    document.getElementById('status').textContent = '✅ ¡Listo!';
-    document.getElementById('instructions').innerHTML = '✋ Mueve las manos para crear corazones 💕';
+function detect() {
+    if (!modelLoaded || !objectDetector) return;
     
-    // Reproducir música
-    music.play();
-    
-    // Ocultar overlay de carga
-    setTimeout(() => {
-        document.getElementById('loading-overlay').classList.add('hidden');
-    }, 500);
-}
-
-function windowResized() {
-    resizeCanvas(windowWidth, windowHeight);
-}
-
-function draw() {
-    // Dibujar video (espejado)
-    push();
-    translate(width, 0);
-    scale(-1, 1);
-    image(video, 0, 0, width, height);
-    pop();
-    
-    // Dibujar pose
-    drawKeypoints();
-    drawSkeleton();
-    
-    // Crear corazones desde las manos
-    createHeartsFromHands();
-    
-    // Actualizar y dibujar corazones
-    updateHearts();
-    drawHearts();
-}
-
-function drawKeypoints() {
-    for (let i = 0; i < poses.length; i++) {
-        let pose = poses[i].pose;
-        // Solo dibujar las manos
-        let hands = ['leftWrist', 'rightWrist'];
-        for (let j = 0; j < pose.keypoints.length; j++) {
-            let keypoint = pose.keypoints[j];
-            if (keypoint.score > 0.2 && hands.includes(keypoint.part)) {
-                fill(255, 100, 150);
-                noStroke();
-                ellipse(width - keypoint.position.x, keypoint.position.y, 20, 20);
+    try {
+        objectDetector.detect(video, (err, results) => {
+            if (err) {
+                console.error(err);
+                return;
             }
-        }
+            detections = results;
+            drawDetections();
+            // Ya no actualizamos el panel inferior
+            // updateDetectionInfo();
+            
+            // Continuar detectando (loop como en p5.js)
+            detect();
+        });
+    } catch (error) {
+        console.error('Error en ciclo de detección:', error);
     }
 }
 
-function drawSkeleton() {
-    for (let i = 0; i < poses.length; i++) {
-        let skeleton = poses[i].skeleton;
-        for (let j = 0; j < skeleton.length; j++) {
-            let partA = skeleton[j][0];
-            let partB = skeleton[j][1];
-            stroke(255, 0, 150);
-            strokeWeight(2);
-            line(
-                width - partA.position.x, partA.position.y,
-                width - partB.position.x, partB.position.y
-            );
-        }
-    }
-}
-
-function createHeartsFromHands() {
-    if (poses.length > 0) {
-        let pose = poses[0].pose;
-        
-        // Obtener posiciones de las manos
-        let leftWrist = pose.keypoints.find(kp => kp.part === 'leftWrist');
-        let rightWrist = pose.keypoints.find(kp => kp.part === 'rightWrist');
-        
-        // Crear corazones desde la mano izquierda con más frecuencia y fuerza
-        if (leftWrist && leftWrist.score > 0.3 && random(1) < 0.3) {
-            // Crear múltiples corazones para efecto propulsor
-            for (let i = 0; i < 2; i++) {
-                let angle = random(-PI/3, PI/3); // Ángulo de dispersión
-                let speed = random(5, 10); // Velocidad más alta
-                hearts.push({
-                    x: width - leftWrist.position.x,
-                    y: leftWrist.position.y,
-                    size: random(20, 40),
-                    speedX: sin(angle) * speed,
-                    speedY: -cos(angle) * speed, // Negativo para ir hacia arriba
-                    opacity: 255,
-                    rotation: random(TWO_PI),
-                    rotationSpeed: random(-0.2, 0.2)
-                });
-            }
-        }
-        
-        // Crear corazones desde la mano derecha con más frecuencia y fuerza
-        if (rightWrist && rightWrist.score > 0.3 && random(1) < 0.3) {
-            // Crear múltiples corazones para efecto propulsor
-            for (let i = 0; i < 2; i++) {
-                let angle = random(-PI/3, PI/3); // Ángulo de dispersión
-                let speed = random(5, 10); // Velocidad más alta
-                hearts.push({
-                    x: width - rightWrist.position.x,
-                    y: rightWrist.position.y,
-                    size: random(20, 40),
-                    speedX: sin(angle) * speed,
-                    speedY: -cos(angle) * speed, // Negativo para ir hacia arriba
-                    opacity: 255,
-                    rotation: random(TWO_PI),
-                    rotationSpeed: random(-0.2, 0.2)
-                });
-            }
-        }
-    }
-}
-
-function updateHearts() {
-    for (let i = hearts.length - 1; i >= 0; i--) {
-        hearts[i].x += hearts[i].speedX;
-        hearts[i].y += hearts[i].speedY;
-        
-        // Aplicar gravedad suave
-        hearts[i].speedY += 0.1;
-        
-        // Desvanecimiento más lento
-        hearts[i].opacity -= 1.5;
-        hearts[i].rotation += hearts[i].rotationSpeed;
-        
-        // Eliminar corazones que se desvanecieron o salieron de la pantalla
-        if (hearts[i].opacity <= 0 || hearts[i].y < -100 || hearts[i].y > height + 100 || 
-            hearts[i].x < -100 || hearts[i].x > width + 100) {
-            hearts.splice(i, 1);
-        }
-    }
-}
-
-function drawHearts() {
-    for (let heart of hearts) {
-        drawHeart(heart.x, heart.y, heart.size, heart.opacity, heart.rotation);
-    }
-}
-
-function drawHeart(x, y, size, opacity, rotation) {
-    push();
-    translate(x, y);
-    rotate(rotation);
-    fill(255, 20, 100, opacity);
-    noStroke();
+function drawDetections() {
+    if (!ctx) return;
     
-    // Dibujar corazón
-    beginShape();
-    vertex(0, size * 0.3);
-    bezierVertex(-size * 0.5, -size * 0.3, -size * 0.5, -size * 0.7, 0, -size * 0.3);
-    bezierVertex(size * 0.5, -size * 0.7, size * 0.5, -size * 0.3, 0, size * 0.3);
-    endShape(CLOSE);
+    // Limpiar el canvas
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
     
-    // Brillo
-    fill(255, 100, 150, opacity * 0.6);
-    ellipse(-size * 0.15, -size * 0.2, size * 0.2, size * 0.2);
-    
-    pop();
+    // Dibujar detecciones como en p5.js
+    for (let i = 0; i < detections.length; i++) {
+        let obj = detections[i];
+
+        let label = obj.label;
+        let confidence = (obj.confidence * 100).toFixed(1);
+
+        // Calcular posición invertida para el texto (para que no aparezca en espejo)
+        const invertedX = canvas.width - obj.x - obj.width;
+        
+        // Dibujar caja de detección
+        ctx.strokeStyle = '#00ff00';
+        ctx.lineWidth = 2;
+        ctx.strokeRect(obj.x, obj.y, obj.width, obj.height);
+
+        // Guardar el estado del contexto
+        ctx.save();
+        
+        // Invertir horizontalmente solo para el texto
+        ctx.scale(-1, 1);
+        
+        // Dibujar etiqueta sin espejo
+        ctx.fillStyle = '#00ff00';
+        ctx.font = '16px Arial';
+        ctx.fillText(
+            `${label} ${confidence}%`,
+            -invertedX + 5,
+            obj.y + 20
+        );
+        
+        // Restaurar el estado del contexto
+        ctx.restore();
+    }
 }
+
+function updateDetectionInfo() {
+    const detectionCount = document.getElementById('detection-count');
+    const detectionList = document.getElementById('detection-list');
+    
+    if (detections.length === 0) {
+        detectionCount.textContent = 'No se detectaron objetos';
+        detectionList.innerHTML = '';
+    } else {
+        detectionCount.textContent = `Se detectaron ${detections.length} objeto(s):`;
+        
+        detectionList.innerHTML = detections.map(detection => {
+            const confidence = (detection.confidence * 100).toFixed(1);
+            return `<div class="detection-tag">${detection.label} ${confidence}%</div>`;
+        }).join('');
+    }
+}
+
+function showError(message) {
+    document.getElementById('loading').classList.add('hidden');
+    const errorContainer = document.getElementById('error-container');
+    errorContainer.innerHTML = `<div class="error-message">${message}</div>`;
+    errorContainer.style.display = 'block';
+}
+
+// Iniciar la aplicación
+window.addEventListener('load', setup);
