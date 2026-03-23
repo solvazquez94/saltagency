@@ -1,7 +1,7 @@
-# Ignorar todo excepto la carpeta SALT AGENCY
-*
-!SALT AGENCY/
-!SALT AGENCY/*
+# Mantener archivos del sitio web
+!index.html
+!styles.css
+!script.js
 
 # Ignorar archivos temporales y de sistema
 .DS_Store
