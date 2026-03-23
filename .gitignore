@@ -1,0 +1,42 @@
+# Ignorar todo excepto la carpeta SALT AGENCY
+*
+!SALT AGENCY/
+!SALT AGENCY/*
+
+# Ignorar archivos temporales y de sistema
+.DS_Store
+.localized
+*.tmp
+*~
+
+# Ignorar archivos de Office
+~$*
+
+# Ignorar archivos multimedia
+*.mkv
+*.mp4
+*.MOV
+*.webp
+*.png
+*.jpg
+*.jpeg
+*.pdf
+*.docx
+*.doc
+
+# Ignorar carpetas personales
+A BAILAR/
+CONCURSO DOCENTE/
+DIPLOMATURA IA/
+FLYER SILVINA/
+FNA/
+LLM/
+mi pagina web/
+PPT CONVOCATORIA/
+TP FINAL IMAGEN/
+UN INTENTO/
+OBS.app/
+VLC.app/
+
+# Ignorar la otra carpeta de proyecto
+como sabe que soy una person/
