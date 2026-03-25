@@ -867,4 +867,28 @@ footer p {
   .timeline-desc {
     font-size: 14px;
   }
+  
+  /* Hero responsive adjustments */
+  .hero-headline .outline,
+  .hero-headline .inner-text {
+    font-size: 48px;
+  }
+  
+  .hero-tag {
+    top: 40px;
+    left: 24px;
+  }
+  
+  .hero-badge-side {
+    display: none;
+  }
+  
+  /* Contact responsive */
+  .contact-email-box {
+    padding: 16px 24px;
+  }
+  
+  .contact-email {
+    font-size: 18px;
+  }
 }
