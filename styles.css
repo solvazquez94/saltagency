@@ -118,34 +118,12 @@ nav a:hover {
   position: relative;
 }
 
-.hero-headline {
-  font-family: 'Plus Jakarta Sans', sans-serif;
-  font-size: 72px;
-  font-weight: 800;
-  line-height: 1.1;
-  letter-spacing: -2px;
-  margin-bottom: 32px;
-  position: relative;
-}
-
-.hero-headline .hero-tag {
+.hero-grid {
   position: absolute;
-  top: -40px;
+  top: 0;
   left: 0;
-  font-size: 12px;
-  font-weight: 600;
-  letter-spacing: 2px;
-  text-transform: uppercase;
-  color: var(--gray);
-  font-family: 'Inter', sans-serif;
-}
-
-.hero-headline .hero-grid {
-  position: absolute;
-  top: -60px;
-  left: -60px;
-  right: -60px;
-  bottom: -20px;
+  right: 0;
+  bottom: 0;
   background-image: 
     linear-gradient(rgba(255,255,255,0.9) 1px, transparent 1px),
     linear-gradient(90deg, rgba(255,255,255,0.9) 1px, transparent 1px);
@@ -154,14 +132,59 @@ nav a:hover {
   z-index: -1;
 }
 
+.hero-tag {
+  position: absolute;
+  top: 60px;
+  left: 60px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--gray);
+  font-family: 'Inter', sans-serif;
+}
+
+.hero-headline {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 72px;
+  font-weight: 800;
+  line-height: 1.1;
+  letter-spacing: -2px;
+  margin-bottom: 32px;
+}
+
 .hero-headline .accent {
   color: var(--green);
 }
 
+.outline-text-wrapper {
+  position: relative;
+  display: inline-block;
+}
+
 .hero-headline .outline {
+  position: absolute;
+  top: 0;
+  left: 0;
   -webkit-text-stroke: 2px var(--black);
   -webkit-text-fill-color: transparent;
   color: transparent;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 72px;
+  font-weight: 800;
+  line-height: 1.1;
+  letter-spacing: -2px;
+  z-index: 1;
+}
+
+.hero-headline .inner-text {
+  position: relative;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 72px;
+  font-weight: 800;
+  line-height: 1.1;
+  letter-spacing: -2px;
+  z-index: 2;
 }
 
 .hero-sub {
@@ -227,7 +250,7 @@ nav a:hover {
 }
 
 .hero-badge-side {
-  position: fixed;
+  position: absolute;
   right: 40px;
   top: 50%;
   transform: translateY(-50%);
@@ -639,7 +662,8 @@ nav a:hover {
 }
 
 .contact-email:hover {
-  color: var(--green);
+  color: var(--black);
+  text-decoration: underline;
 }
 
 .contact-social {
